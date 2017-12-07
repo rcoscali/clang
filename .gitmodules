@@ -1,0 +1,6 @@
+[submodule "tools_extra"]
+	path = tools/extra
+	url = git@github.com:rcoscali/clang-tools-extra.git
+[submodule "tools/json"]
+	path = tools/json
+	url = git@github.com:JayaCodeFr/json.git
