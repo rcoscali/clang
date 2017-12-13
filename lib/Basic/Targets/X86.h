@@ -193,6 +193,10 @@ public:
     return "";
   }
 
+  bool useFP16ConversionIntrinsics() const override {
+    return false;
+  }
+
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
   
@@ -710,15 +714,6 @@ public:
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
     HasFloat128 = true;
   }
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    WindowsX86_64TargetInfo::getTargetDefines(Opts, Builder);
-
-    // GCC defines this macro when it is using __gxx_personality_seh0.
-    if (!Opts.SjLjExceptions)
-      Builder.defineMacro("__SEH__");
-  }
 };
 
 // x86-64 Cygwin target
@@ -740,10 +735,6 @@ public:
     DefineStd(Builder, "unix", Opts);
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
-
-    // GCC defines this macro when it is using __gxx_personality_seh0.
-    if (!Opts.SjLjExceptions)
-      Builder.defineMacro("__SEH__");
   }
 };
 

@@ -274,6 +274,27 @@ static void ParseMRecip(const Driver &D, const ArgList &Args,
   OutStrings.push_back(Args.MakeArgString(Out));
 }
 
+/// The -mprefer-vector-width option accepts either a positive integer
+/// or the string "none".
+static void ParseMPreferVectorWidth(const Driver &D, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  Arg *A = Args.getLastArg(options::OPT_mprefer_vector_width_EQ);
+  if (!A)
+    return;
+
+  StringRef Value = A->getValue();
+  if (Value == "none") {
+    CmdArgs.push_back("-mprefer-vector-width=none");
+  } else {
+    unsigned Width;
+    if (Value.getAsInteger(10, Width)) {
+      D.Diag(diag::err_drv_invalid_value) << A->getOption().getName() << Value;
+      return;
+    }
+    CmdArgs.push_back(Args.MakeArgString("-mprefer-vector-width=" + Value));
+  }
+}
+
 static void getWebAssemblyTargetFeatures(const ArgList &Args,
                                          std::vector<StringRef> &Features) {
   handleTargetFeaturesGroup(Args, Features, options::OPT_m_wasm_Features_Group);
@@ -4166,9 +4187,33 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     addExceptionArgs(Args, InputType, getToolChain(), KernelOrKext, Runtime,
                      CmdArgs);
 
-  if (Args.hasArg(options::OPT_fsjlj_exceptions) ||
-      getToolChain().UseSjLjExceptions(Args))
-    CmdArgs.push_back("-fsjlj-exceptions");
+  // Handle exception personalities
+  Arg *A = Args.getLastArg(options::OPT_fsjlj_exceptions,
+                           options::OPT_fseh_exceptions,
+                           options::OPT_fdwarf_exceptions);
+  if (A) {
+    const Option &Opt = A->getOption();
+    if (Opt.matches(options::OPT_fsjlj_exceptions))
+      CmdArgs.push_back("-fsjlj-exceptions");
+    if (Opt.matches(options::OPT_fseh_exceptions))
+      CmdArgs.push_back("-fseh-exceptions");
+    if (Opt.matches(options::OPT_fdwarf_exceptions))
+      CmdArgs.push_back("-fdwarf-exceptions");
+  } else {
+    switch (getToolChain().GetExceptionModel(Args)) {
+    default:
+      break;
+    case llvm::ExceptionHandling::DwarfCFI:
+      CmdArgs.push_back("-fdwarf-exceptions");
+      break;
+    case llvm::ExceptionHandling::SjLj:
+      CmdArgs.push_back("-fsjlj-exceptions");
+      break;
+    case llvm::ExceptionHandling::WinEH:
+      CmdArgs.push_back("-fseh-exceptions");
+      break;
+    }
+  }
 
   // C++ "sane" operator new.
   if (!Args.hasFlag(options::OPT_fassume_sane_operator_new,
@@ -4308,6 +4353,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
                    options::OPT_fno_slp_vectorize, EnableSLPVec))
     CmdArgs.push_back("-vectorize-slp");
+
+  ParseMPreferVectorWidth(D, Args, CmdArgs);
 
   if (Arg *A = Args.getLastArg(options::OPT_fshow_overloads_EQ))
     A->render(Args, CmdArgs);
