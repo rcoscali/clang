@@ -24,6 +24,8 @@
 #==============================================================================#
 cscope.files
 cscope.out
+.clang-tidy
+.clang-format
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
