@@ -800,8 +800,12 @@ def fencoding_EQ : Joined<["-"], "fencoding=">, Group<f_Group>;
 def ferror_limit_EQ : Joined<["-"], "ferror-limit=">, Group<f_Group>, Flags<[CoreOption]>;
 def fexceptions : Flag<["-"], "fexceptions">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable support for exception handling">;
+def fdwarf_exceptions : Flag<["-"], "fdwarf-exceptions">, Group<f_Group>,
+  Flags<[CC1Option]>, HelpText<"Use DWARF style exceptions">;
 def fsjlj_exceptions : Flag<["-"], "fsjlj-exceptions">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Use SjLj style exceptions">;
+def fseh_exceptions : Flag<["-"], "fseh-exceptions">, Group<f_Group>,
+  Flags<[CC1Option]>, HelpText<"Use SEH style exceptions">;
 def fexcess_precision_EQ : Joined<["-"], "fexcess-precision=">,
     Group<clang_ignored_gcc_optimization_f_Group>;
 def : Flag<["-"], "fexpensive-optimizations">, Group<clang_ignored_gcc_optimization_f_Group>;
@@ -1055,6 +1059,12 @@ def fxray_never_instrument :
   JoinedOrSeparate<["-"], "fxray-never-instrument=">,
   Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Filename defining the whitelist for imbuing the 'never instrument' XRay attribute.">;
+
+def fxray_always_emit_customevents : Flag<["-"], "fxray-always-emit-customevents">, Group<f_Group>,
+  Flags<[CC1Option]>,
+  HelpText<"Determine whether to always emit __xray_customevent(...) calls even if the function it appears in is not always instrumented.">;
+def fnoxray_always_emit_customevents : Flag<["-"], "fno-xray-always-emit-customevents">, Group<f_Group>,
+  Flags<[CC1Option]>;
 
 def ffine_grained_bitfield_accesses : Flag<["-"],
   "ffine-grained-bitfield-accesses">, Group<f_clang_Group>, Flags<[CC1Option]>,
@@ -1837,6 +1847,8 @@ def ffixed_x18 : Flag<["-"], "ffixed-x18">, Group<m_aarch64_Features_Group>,
 
 def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
 def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;
+def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Features_Group>;
+def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
 
 def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">,
   Flags<[HelpHidden]>,
@@ -1942,6 +1954,8 @@ def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
 def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
 def mrecip : Flag<["-"], "mrecip">, Group<m_Group>;
 def mrecip_EQ : CommaJoined<["-"], "mrecip=">, Group<m_Group>, Flags<[CC1Option]>;
+def mprefer_vector_width_EQ : Joined<["-"], "mprefer-vector-width=">, Group<m_Group>, Flags<[CC1Option]>,
+  HelpText<"Specifies preferred vector width for auto-vectorization. Defaults to 'none' which allows target specific decisions.">;
 def mpie_copy_relocations : Flag<["-"], "mpie-copy-relocations">, Group<m_Group>,
   Flags<[CC1Option]>,
   HelpText<"Use copy relocations support for PIE builds">;
@@ -2393,6 +2407,8 @@ def mv60 : Flag<["-"], "mv60">, Group<m_hexagon_Features_Group>,
            Alias<mcpu_EQ>, AliasArgs<["hexagonv60"]>;
 def mv62 : Flag<["-"], "mv62">, Group<m_hexagon_Features_Group>,
            Alias<mcpu_EQ>, AliasArgs<["hexagonv62"]>;
+def mv65 : Flag<["-"], "mv65">, Group<m_hexagon_Features_Group>,
+           Alias<mcpu_EQ>, AliasArgs<["hexagonv65"]>;
 def mhexagon_hvx : Flag<[ "-" ], "mhvx">,
                    Group<m_hexagon_Features_HVX_Group>,
                    HelpText<"Enable Hexagon Vector eXtensions">;

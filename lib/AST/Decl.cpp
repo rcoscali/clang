@@ -1506,8 +1506,7 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
     if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
       OS << Spec->getName();
       const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-      TemplateSpecializationType::PrintTemplateArgumentList(
-          OS, TemplateArgs.asArray(), P);
+      printTemplateArgumentList(OS, TemplateArgs.asArray(), P);
     } else if (const auto *ND = dyn_cast<NamespaceDecl>(DC)) {
       if (P.SuppressUnwrittenScope &&
           (ND->isAnonymousNamespace() || ND->isInline()))
@@ -1975,6 +1974,9 @@ VarDecl *VarDecl::getCanonicalDecl() { return getFirstDecl(); }
 
 VarDecl::DefinitionKind
 VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
+  if (isThisDeclarationADemotedDefinition())
+    return DeclarationOnly;
+
   // C++ [basic.def]p2:
   //   A declaration is a definition unless [...] it contains the 'extern'
   //   specifier or a linkage-specification and neither an initializer [...],
@@ -1988,9 +1990,6 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   //
   // FIXME: How do you declare (but not define) a partial specialization of
   // a static data member template outside the containing class?
-  if (isThisDeclarationADemotedDefinition())
-    return DeclarationOnly;
-
   if (isStaticDataMember()) {
     if (isOutOfLine() &&
         !(getCanonicalDecl()->isInline() &&
@@ -2030,9 +2029,12 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   // A variable template specialization (other than a static data member
   // template or an explicit specialization) is a declaration until we
   // instantiate its initializer.
-  if (isa<VarTemplateSpecializationDecl>(this) &&
-      getTemplateSpecializationKind() != TSK_ExplicitSpecialization)
-    return DeclarationOnly;
+  if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(this)) {
+    if (VTSD->getTemplateSpecializationKind() != TSK_ExplicitSpecialization &&
+        !isa<VarTemplatePartialSpecializationDecl>(VTSD) &&
+        !VTSD->IsCompleteDefinition)
+      return DeclarationOnly;
+  }
 
   if (hasExternalStorage())
     return DeclarationOnly;
@@ -2416,15 +2418,21 @@ void VarDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
           dyn_cast<VarTemplateSpecializationDecl>(this)) {
     Spec->setSpecializationKind(TSK);
     if (TSK != TSK_ExplicitSpecialization && PointOfInstantiation.isValid() &&
-        Spec->getPointOfInstantiation().isInvalid())
+        Spec->getPointOfInstantiation().isInvalid()) {
       Spec->setPointOfInstantiation(PointOfInstantiation);
+      if (ASTMutationListener *L = getASTContext().getASTMutationListener())
+        L->InstantiationRequested(this);
+    }
   }
 
   if (MemberSpecializationInfo *MSI = getMemberSpecializationInfo()) {
     MSI->setTemplateSpecializationKind(TSK);
     if (TSK != TSK_ExplicitSpecialization && PointOfInstantiation.isValid() &&
-        MSI->getPointOfInstantiation().isInvalid())
+        MSI->getPointOfInstantiation().isInvalid()) {
       MSI->setPointOfInstantiation(PointOfInstantiation);
+      if (ASTMutationListener *L = getASTContext().getASTMutationListener())
+        L->InstantiationRequested(this);
+    }
   }
 }
 
@@ -2556,8 +2564,7 @@ void FunctionDecl::getNameForDiagnostic(
   NamedDecl::getNameForDiagnostic(OS, Policy, Qualified);
   const TemplateArgumentList *TemplateArgs = getTemplateSpecializationArgs();
   if (TemplateArgs)
-    TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, TemplateArgs->asArray(), Policy);
+    printTemplateArgumentList(OS, TemplateArgs->asArray(), Policy);
 }
 
 bool FunctionDecl::isVariadic() const {
@@ -3441,15 +3448,21 @@ FunctionDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
     FTSInfo->setTemplateSpecializationKind(TSK);
     if (TSK != TSK_ExplicitSpecialization &&
         PointOfInstantiation.isValid() &&
-        FTSInfo->getPointOfInstantiation().isInvalid())
+        FTSInfo->getPointOfInstantiation().isInvalid()) {
       FTSInfo->setPointOfInstantiation(PointOfInstantiation);
+      if (ASTMutationListener *L = getASTContext().getASTMutationListener())
+        L->InstantiationRequested(this);
+    }
   } else if (MemberSpecializationInfo *MSInfo
              = TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo*>()) {
     MSInfo->setTemplateSpecializationKind(TSK);
     if (TSK != TSK_ExplicitSpecialization &&
         PointOfInstantiation.isValid() &&
-        MSInfo->getPointOfInstantiation().isInvalid())
+        MSInfo->getPointOfInstantiation().isInvalid()) {
       MSInfo->setPointOfInstantiation(PointOfInstantiation);
+      if (ASTMutationListener *L = getASTContext().getASTMutationListener())
+        L->InstantiationRequested(this);
+    }
   } else
     llvm_unreachable("Function cannot have a template specialization kind");
 }

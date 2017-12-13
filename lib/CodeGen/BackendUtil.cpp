@@ -237,6 +237,11 @@ static void addKernelAddressSanitizerPasses(const PassManagerBuilder &Builder,
                                           /*Recover*/true));
 }
 
+static void addHWAddressSanitizerPasses(const PassManagerBuilder &Builder,
+                                            legacy::PassManagerBase &PM) {
+  PM.add(createHWAddressSanitizerPass());
+}
+
 static void addMemorySanitizerPass(const PassManagerBuilder &Builder,
                                    legacy::PassManagerBase &PM) {
   const PassManagerBuilderWrapper &BuilderWrapper =
@@ -424,6 +429,10 @@ static void initTargetOptions(llvm::TargetOptions &Options,
 
   if (LangOpts.SjLjExceptions)
     Options.ExceptionModel = llvm::ExceptionHandling::SjLj;
+  if (LangOpts.SEHExceptions)
+    Options.ExceptionModel = llvm::ExceptionHandling::WinEH;
+  if (LangOpts.DWARFExceptions)
+    Options.ExceptionModel = llvm::ExceptionHandling::DwarfCFI;
 
   Options.NoInfsFPMath = CodeGenOpts.NoInfsFPMath;
   Options.NoNaNsFPMath = CodeGenOpts.NoNaNsFPMath;
@@ -550,6 +559,13 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                            addKernelAddressSanitizerPasses);
     PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
                            addKernelAddressSanitizerPasses);
+  }
+
+  if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {
+    PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
+                           addHWAddressSanitizerPasses);
+    PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
+                           addHWAddressSanitizerPasses);
   }
 
   if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
