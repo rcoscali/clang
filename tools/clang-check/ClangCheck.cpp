@@ -138,9 +138,10 @@ public:
     if (ASTList)
       return clang::CreateASTDeclNodeLister();
     if (ASTDump)
-      return clang::CreateASTDumper(ASTDumpFilter, /*DumpDecls=*/true,
+      return clang::CreateASTDumper(ASTDumpFilter,
+                                    /*DumpDecls=*/true,
                                     /*Deserialize=*/false,
-                                    /*DumpLookups=*/false);
+                                    /*DumpLookups=*/true);
     if (ASTPrint)
       return clang::CreateASTPrinter(nullptr, ASTDumpFilter);
     return llvm::make_unique<clang::ASTConsumer>();
