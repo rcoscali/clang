@@ -1,0 +1,3 @@
+[submodule "tools/json"]
+	path = tools/json
+	url = git@github.com:rcoscali/json.git
